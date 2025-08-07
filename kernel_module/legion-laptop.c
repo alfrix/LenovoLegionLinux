@@ -2187,7 +2187,7 @@ static bool fancurve_set_speed_pwm(struct fancurve *fancurve, int point_id,
 {
 	u8 *speed;
 
-	if (!(point_id == 0 ? value == 0 : (value >= 0 && value <= 255))) {
+	if (!(value >= 0 && value <= 255)) {
 		pr_err("Value %d PWM not in allowed range to point with id %d",
 		       value, point_id);
 		return false;
@@ -2208,7 +2208,7 @@ static bool fancurve_set_speed_pwm(struct fancurve *fancurve, int point_id,
 		*speed = clamp_t(u8, value, 0, 255);
 		return true;
 	case FAN_SPEED_UNIT_RPM_HUNDRED:
-		*speed = clamp_t(u8, value * MAX_RPM / 100 / 255, 0, 255);
+		*speed = clamp_t(u8, (value * MAX_RPM + (100 * 255) - 1) / (100 * 255), 0, 255);
 		return true;
 	default:
 		pr_info("No method to set for fan_speed_unit %d.",
