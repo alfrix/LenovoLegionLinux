@@ -3020,18 +3020,10 @@ struct WMIFanTableWriteLoq {
 static ssize_t wmi_write_fancurve_defaults(struct legion_private *priv, int value)
 {
 	int err;
-	int powermode;
 	unsigned long res;
 	struct WMIFanTableWriteLoq fan_table = {0} ;
 
-	err = wmi_exec_noarg_int(LEGION_WMI_GAMEZONE_GUID, 0,
-				 WMI_METHOD_ID_GETSMARTFANMODE, &res);
-
-	if (!err)
-		powermode = res;
-	else
-		powermode = 0xff; // set custom
-	fan_table.F000 = powermode;
+	fan_table.F000 = value;
 	// reusing the fancurve speed1, needs a new option on hwmon ? / acpi/firmware? 
 	// fan_table.F003 = fancurve->points[0].idx;
 	// Writing the defaults
@@ -3568,7 +3560,8 @@ enum legion_wmi_powermode {
 	LEGION_WMI_POWERMODE_QUIET = 1,
 	LEGION_WMI_POWERMODE_BALANCED = 2,
 	LEGION_WMI_POWERMODE_PERFORMANCE = 3,
-	LEGION_WMI_POWERMODE_CUSTOM = 255
+	LEGION_WMI_POWERMODE_CUSTOM = 255,
+	LEGION_WMI_POWERMODE_EXTREME = 224
 };
 
 static enum legion_wmi_powermode ec_to_wmi_powermode(int ec_mode)
@@ -5493,6 +5486,16 @@ static ssize_t auto_points_defaults_store(struct device *dev,
 	if (err) {
 		err = -1;
 		pr_info("Parsing hwmon store failed: error:%d\n", err);
+		goto error;
+	}
+	
+	if (!(value == LEGION_WMI_POWERMODE_QUIET ||
+	      value == LEGION_WMI_POWERMODE_PERFORMANCE ||
+	      value == LEGION_WMI_POWERMODE_BALANCED ||
+	      value == LEGION_WMI_POWERMODE_CUSTOM ||
+	      value == LEGION_WMI_POWERMODE_EXTREME )) {
+		err = -1;
+		pr_info("Parsing hwmon store failed invalid powermode id %d: error:%d\n", value, err);
 		goto error;
 	}
 
