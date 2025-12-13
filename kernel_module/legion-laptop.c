@@ -397,6 +397,39 @@ static const struct ec_register_offsets ec_register_offsets_loq_v0 = {
 	.EXT_WHITE_KEYBOARD_BACKLIGHT = 0xC5a0 // not found yet
 };
 
+static const struct ec_register_offsets ec_register_offsets_loq_v1 = {
+	.ECHIPID1 = 0x2000,
+	.ECHIPID2 = 0x2001,
+	.ECHIPVER = 0x2002,
+	.ECDEBUG = 0x2003,
+	.EXT_FAN_CUR_POINT = 0xC524,
+	.EXT_FAN_POINTS_SIZE = 0xC5a0, // constant 0
+	.EXT_FAN1_BASE = 0xC509, // cpu fan
+	.EXT_FAN2_BASE = 0xC53C, // gpu fan
+	.EXT_FAN_ACC_BASE = 0xC5a0, // not found yet
+	.EXT_FAN_DEC_BASE = 0xC5a0, // not found yet
+	.EXT_CPU_TEMP = 0xC508, // cpu temp max
+	.EXT_CPU_TEMP_HYST = 0xC507, // cpu temp min
+	.EXT_GPU_TEMP = 0xC533,
+	.EXT_GPU_TEMP_HYST = 0xC5a0, // not found yet
+	.EXT_VRM_TEMP = 0xC5a0, // not found yet
+	.EXT_VRM_TEMP_HYST = 0xC5a0, // not found yet
+	.EXT_FAN1_RPM_LSB = 0xC5a0, // not found yet
+	.EXT_FAN1_RPM_MSB = 0xC5a0, // not found yet
+	.EXT_FAN2_RPM_LSB = 0xC5a0, // not found yet
+	.EXT_FAN2_RPM_MSB = 0xC5a0, // not found yet
+	.EXT_MINIFANCURVE_ON_COOL = 0xC5a0, // not found yet
+	.EXT_LOCKFANCONTROLLER = 0xC5a0, // not found yet
+	.EXT_CPU_TEMP_INPUT = 0xC5a0, // not found yet
+	.EXT_GPU_TEMP_INPUT = 0xC5a0, // not found yet
+	.EXT_IC_TEMP_INPUT = 0xC5a0, // not found yet
+	.EXT_POWERMODE = 0xc41D,
+	.EXT_FAN1_TARGET_RPM = 0xC5a0, // not found yet
+	.EXT_FAN2_TARGET_RPM = 0xC5a0, // not found yet
+	.EXT_MAXIMUMFANSPEED = 0xC5a0, // not found yet
+	.EXT_WHITE_KEYBOARD_BACKLIGHT = 0xC5a0 // not found yet
+};
+
 static const struct model_config model_v0 = {
 	.registers = &ec_register_offsets_v0,
 	.check_embedded_controller_id = true,
@@ -1006,6 +1039,25 @@ static const struct model_config model_nzcn = {
 	.ramio_size = 0x600
 };
 
+static const struct model_config model_r3cn = {
+	.registers = &ec_register_offsets_loq_v1,
+	.check_embedded_controller_id = true,
+	.embedded_controller_id = 0x5508,
+	.memoryio_physical_ec_start = 0xC400,
+	.memoryio_size = 0x600,
+	.has_minifancurve = true,
+	.has_custom_powermode = true,
+	.access_method_powermode = ACCESS_METHOD_WMI,
+	.access_method_keyboard = ACCESS_METHOD_WMI2,
+	.access_method_fanspeed = ACCESS_METHOD_WMI3,
+	.access_method_temperature = ACCESS_METHOD_WMI3,
+	.access_method_fancurve = ACCESS_METHOD_EC3,
+	.access_method_fanfullspeed = ACCESS_METHOD_WMI3,
+	.acpi_check_dev = false,
+	.ramio_physical_start = 0xFE0B0400,
+	.ramio_size = 0x600
+};
+
 static const struct dmi_system_id denylist[] = { {} };
 
 static const struct dmi_system_id optimistic_allowlist[] = {
@@ -1380,6 +1432,15 @@ static const struct dmi_system_id optimistic_allowlist[] = {
 			DMI_MATCH(DMI_BIOS_VERSION, "NZCN"),
 		},
 		.driver_data = (void *)&model_nzcn
+	},
+	{
+		// e.g. LOQ 15IRX10 (Intel 13450HX + RTX 5060)
+		.ident = "R3CN",
+		.matches = {
+			DMI_MATCH(DMI_SYS_VENDOR, "LENOVO"),
+			DMI_MATCH(DMI_BIOS_VERSION, "R3CN"),
+		},
+		.driver_data = (void *)&model_r3cn
 	},
 	{}
 };
@@ -3281,7 +3342,8 @@ static int ec_read_fancurve_loq(struct ecram *ecram,
 
 		point->speed1 =
 			ecram_read(ecram, model->registers->EXT_FAN1_BASE + (i * struct_offset));
-		point->speed2 = point->speed1;
+		point->speed2 =
+			ecram_read(ecram, model->registers->EXT_FAN2_BASE + (i * struct_offset));
 
 		 // point->accel = 0;
 		 // point->decel = 0;
